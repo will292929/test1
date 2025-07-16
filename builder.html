@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Modular Site Flow Editor</title>
+  <style>
+    body {
+      margin: 0; padding: 2rem;
+      font-family: sans-serif;
+      background: #111; color: #fff;
+      display: flex;
+      flex-direction: column;
+    }
+    h1 { margin-bottom: 1.5rem; }
+
+    #controls {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+    }
+    #controls select,
+    #controls button {
+      background: #ff4d4d;
+      color: #fff;
+      border: none;
+      padding: 0.6rem 1.2rem;
+      border-radius: 6px;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+    #controls select { background: #333; }
+    #controls option { background: #222; }
+
+    #flow-container {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .flow-block {
+      background: #222;
+      border: 1px solid #444;
+      border-radius: 8px;
+      padding: 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .flow-block .info { cursor: pointer; }
+    .flow-block .actions button {
+      background: #333;
+      color: #fff;
+      border: none;
+      padding: 0.4rem 0.75rem;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-left: 0.5rem;
+    }
+    .flow-block .actions button:hover {
+      background: #555;
+    }
+
+    /* Modal editor */
+    #editor-modal {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      background: rgba(0,0,0,0.8);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    #editor-modal.active {
+      display: flex;
+    }
+    .modal-content {
+      background: #222;
+      padding: 1.5rem;
+      border-radius: 10px;
+      width: 400px;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+    .modal-content h2 {
+      margin-top: 0;
+      font-size: 1.25rem;
+      margin-bottom: 1rem;
+    }
+    .modal-content .field {
+      margin-bottom: 1rem;
+    }
+    .modal-content label {
+      display: block;
+      margin-bottom: 0.25rem;
+      font-size: 0.9rem;
+    }
+    .modal-content input,
+    .modal-content select {
+      width: 100%;
+      padding: 0.5rem;
+      background: #111;
+      color: #fff;
+      border: 1px solid #555;
+      border-radius: 4px;
+    }
+    .modal-buttons {
+      display: flex;
+      gap: 1rem;
+      margin-top: 1rem;
+      justify-content: flex-end;
+    }
+    .modal-buttons button {
+      padding: 0.6rem 1rem;
+      font-size: 1rem;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    #modal-save { background: #28a745; color: #fff; }
+    #modal-cancel { background: #dc3545; color: #fff; }
+
+    /* Code output modal */
+    #code-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.8);
+      z-index: 2000;
+      align-items: center;
+      justify-content: center;
+    }
+    #code-modal-content {
+      background: #222;
+      padding: 1rem;
+      border-radius: 8px;
+      width: 80%;
+      max-height: 80%;
+      overflow: auto;
+    }
+    #code-output {
+      width: 100%;
+      height: 400px;
+      background: #111;
+      color: #0f0;
+      font-family: monospace;
+      padding: 1rem;
+      border: 1px solid #333;
+      border-radius: 6px;
+      box-sizing: border-box;
+    }
+  </style>
+</head>
+<body>
+  <h1>🧱 Modular Site Flow Editor</h1>
+
+  <div id="controls">
+    <select id="module-type-select">
+      <option value="">-- Select Module Type --</option>
+      <option value="headerA">Header A</option>
+      <option value="headerB">Header B</option>
+      <option value="formEmbed">Form Embed</option>
+      <option value="carousel">Carousel</option>
+      <option value="faq">FAQ Section</option>
+      <option value="photoBlock">Photo Block</option>
+      <option value="sectionGrid">Section Grid</option>
+      <option value="testimonialCarousel">Testimonial Carousel</option>
+      <option value="background">Background</option>
+    </select>
+    <button id="add-block-btn">➕ Add Block</button>
+    <button id="save-json-btn">💾 Save JSON</button>
+    <button id="generate-code-btn">🧠 Generate Code</button>
+    <button id="load-code-btn">📥 Load Code</button>
+
+  </div>
+
+  <div id="flow-container"></div>
+
+  <!-- Modal for editing -->
+  <div id="editor-modal">
+    <div class="modal-content">
+      <h2 id="modal-title">Edit Block</h2>
+      <div id="modal-fields"></div>
+      <div class="modal-buttons">
+        <button id="modal-save">Save</button>
+        <button id="modal-cancel">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal for generated code -->
+  <div id="code-modal">
+    <div id="code-modal-content">
+      <h2>🧠 Generated Code</h2>
+      <textarea id="code-output" readonly></textarea>
+      <div style="text-align:right; margin-top: 1rem;">
+        <button onclick="document.getElementById('code-modal').style.display='none'">Close</button>
+      </div>
+    </div>
+  </div>
+  <div id="import-modal" style="display:none; position:fixed; inset:0; background:#000c; z-index:2000; align-items:center; justify-content:center;">
+    <div style="background:#222; padding:1rem; border-radius:8px; width:80%; max-height:80%; overflow:auto;">
+      <h2>📥 Paste Generated Code</h2>
+      <textarea id="import-input" style="width:100%; height:300px; background:#111; color:#0f0; font-family:monospace;"></textarea>
+      <div style="text-align:right; margin-top: 1rem;">
+        <button onclick="parseImportedCode()">Import</button>
+        <button onclick="document.getElementById('import-modal').style.display='none'">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Load schema & logic -->
+  <script src="editorSchema.js"></script>
+  <script src="buttons.js"></script>
+  <script>
+    window.addEventListener('DOMContentLoaded', () => {
+      if (typeof window.editorSchema !== 'object') {
+        alert("🚨 editorSchema.js failed to load or is broken.");
+        return;
+      }
+      if (typeof window.initBuilder === "function") {
+        window.initBuilder();
+      } else {
+        alert("🚨 initBuilder() is not defined. Check buttons.js.");
+      }
+    });
+</script>
+
+</body>
+</html>
