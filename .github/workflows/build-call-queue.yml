@@ -1,0 +1,28 @@
+name: Build Call Queue APK
+on:
+  push:
+    branches: [agent/call-queue]
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: CallQueue
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Download Gradle
+        run: |
+          curl -sSLO https://services.gradle.org/distributions/gradle-8.7-bin.zip
+          unzip -q gradle-8.7-bin.zip
+      - name: Build debug APK
+        run: ./gradle-8.7/bin/gradle assembleDebug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CallQueue-debug-apk
+          path: CallQueue/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
